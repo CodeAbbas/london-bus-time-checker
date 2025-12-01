@@ -14,27 +14,14 @@ import { StatsCard } from "@/components/stats-card"
 // LocalStorage cache management
 const CACHE_TTL = 60 * 1000 // 60 seconds
 
-// Lazy loaded components with better loading states
-const InteractiveMap = dynamic(() => import("@/components/interactive-map"), {
+// Lazy loaded Leaflet Map
+const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
   ssr: false,
   loading: () => (
     <div className="h-full bg-tfl-gray-50 rounded-lg flex items-center justify-center">
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
-        <p className="text-timing text-tfl-gray-600">Loading interactive map...</p>
-      </div>
-    </div>
-  ),
-})
-
-// Lazy loaded live bus map - defer loaded
-const LiveBusMap = dynamic(() => import("@/components/live-bus-map"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full bg-tfl-gray-50 rounded-lg flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
-        <p className="text-timing text-tfl-gray-600">Loading live bus map...</p>
+        <p className="text-timing text-tfl-gray-600">Loading map...</p>
       </div>
     </div>
   ),
@@ -413,21 +400,12 @@ export default function TfLBusTracker() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 h-[calc(100%-4rem)]">
-            {selectedStop ? (
-              <LiveBusMap
-                busStops={allStops}
-                selectedStop={selectedStop}
-                userLocation={userLocation}
-                onStopSelect={handleStopSelect}
-              />
-            ) : (
-              <InteractiveMap
-                busStops={allStops}
-                selectedStop={selectedStop}
-                userLocation={userLocation}
-                onStopSelect={handleStopSelect}
-              />
-            )}
+            <LeafletMap
+              busStops={allStops}
+              selectedStop={selectedStop}
+              userLocation={userLocation}
+              onStopSelect={handleStopSelect}
+            />
           </CardContent>
         </Card>
       </div>
