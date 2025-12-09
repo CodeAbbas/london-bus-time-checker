@@ -14,7 +14,7 @@ import { StatsCard } from "@/components/stats-card"
 // LocalStorage cache management
 const CACHE_TTL = 60 * 1000 // 60 seconds
 
-// Lazy loaded Leaflet Map
+// Lazy loaded Leaflet Map (Handles both interactive and live modes)
 const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
   ssr: false,
   loading: () => (
@@ -26,6 +26,7 @@ const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
     </div>
   ),
 })
+
 
 interface BusStop {
   id: string
