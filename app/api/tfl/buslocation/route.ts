@@ -70,7 +70,15 @@ export async function GET(request: NextRequest) {
 
     const busLocations = (await Promise.all(busPromises)).filter(Boolean)
 
-    return NextResponse.json({ buses: busLocations })
+    return NextResponse.json(
+      { buses: busLocations },
+      {
+        headers: {
+          // Cache results on Vercel's Edge Network for 15 seconds
+          "Cache-Control": "public, s-maxage=15, stale-while-revalidate=15",
+        },
+      }
+    )
   } catch (error) {
     console.error("TfL Bus Location API error:", error)
     return NextResponse.json({ error: "Failed to get bus locations" }, { status: 500 })
