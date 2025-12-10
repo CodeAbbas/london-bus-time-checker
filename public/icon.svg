@@ -1,26 +1,88 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
   <style>
-    @media (prefers-color-scheme: light) {
-      .background { fill: black; }
-      .foreground { fill: white; }
+    :root {
+      --bg-color: #ffffff;
+      --text-main: #002654; /* Navy Blue */
+      --text-sub: #707070;  /* Grey */
+      --bus-red: #E62321;   /* TfL Red */
+      --wheel-inner: #ffffff;
     }
+
     @media (prefers-color-scheme: dark) {
-      .background { fill: white; }
-      .foreground { fill: black; }
+      :root {
+        --bg-color: #121212;
+        --text-main: #ffffff;
+        --text-sub: #bbbbbb;
+        --wheel-inner: #121212;
+      }
     }
+
+    .background { fill: var(--bg-color); }
+    .title-text { 
+      font-family: Arial, Helvetica, sans-serif; 
+      font-weight: 900; 
+      font-size: 24px; 
+      fill: var(--text-main); 
+    }
+    .subtitle-text { 
+      font-family: Arial, Helvetica, sans-serif; 
+      font-weight: bold; 
+      font-size: 13px; 
+      letter-spacing: 0.5px;
+      fill: var(--text-sub); 
+      text-anchor: middle;
+    }
+    .bus-body { fill: var(--bus-red); }
+    .clock-stroke { stroke: var(--bus-red); stroke-width: 3; fill: none; }
+    .clock-fill { fill: var(--bus-red); }
+    .wheel { fill: var(--text-main); }
+    .wheel-center { fill: var(--wheel-inner); }
   </style>
-  <g clip-path="url(#clip0_7960_43945)">
-    <rect class="background" width="180" height="180" rx="37" />
-    <g style="transform: scale(95%); transform-origin: center">
-      <path class="foreground"
-        d="M101.141 53H136.632C151.023 53 162.689 64.6662 162.689 79.0573V112.904H148.112V79.0573C148.112 78.7105 148.098 78.3662 148.072 78.0251L112.581 112.898C112.701 112.902 112.821 112.904 112.941 112.904H148.112V126.672H112.941C98.5504 126.672 86.5638 114.891 86.5638 100.5V66.7434H101.141V100.5C101.141 101.15 101.191 101.792 101.289 102.422L137.56 66.7816C137.255 66.7563 136.945 66.7434 136.632 66.7434H101.141V53Z" />
-      <path class="foreground"
-        d="M65.2926 124.136L14 66.7372H34.6355L64.7495 100.436V66.7372H80.1365V118.47C80.1365 126.278 70.4953 129.958 65.2926 124.136Z" />
+
+  <rect class="background" width="180" height="180" rx="30" />
+
+  <g transform="translate(12, 48)">
+    <text x="0" y="0" class="title-text">L</text>
+    <text x="42" y="0" class="title-text">NDON LIVE</text>
+    
+    <g transform="translate(28, -8)">
+       <circle cx="0" cy="0" r="9" class="clock-stroke" />
+       <path d="M0,-5 V0 L4,4" stroke="#E62321" stroke-width="3" stroke-linecap="round" fill="none" />
+       <path d="M3,3 L6,6 L7,2 Z" class="clock-fill" />
     </g>
   </g>
-  <defs>
-    <clipPath id="clip0_7960_43945">
-      <rect width="180" height="180" fill="white" />
-    </clipPath>
-  </defs>
+
+  <g transform="translate(15, 65)">
+    <path class="bus-body" fill-rule="evenodd" d="
+      M5,0 
+      H135 A10,10 0 0 1 145,10 
+      V15 
+      L150,25 
+      V55 A5,5 0 0 1 145,60 
+      H125 
+      H105 
+      H45 
+      H25 
+      H5 A5,5 0 0 1 0,55 
+      V5 A5,5 0 0 1 5,0 
+      Z
+      
+      M10,10 H35 V30 H10 V10 Z
+      M42,10 H67 V30 H42 V10 Z
+      M74,10 H99 V30 H74 V10 Z
+      M106,10 H135 V30 H106 V10 Z
+    " />
+    
+    <g transform="translate(35, 60)">
+      <circle r="9" class="wheel" />
+      <circle r="4" class="wheel-center" />
+    </g>
+    <g transform="translate(115, 60)">
+      <circle r="9" class="wheel" />
+      <circle r="4" class="wheel-center" />
+    </g>
+  </g>
+
+  <text x="90" y="155" class="subtitle-text">BUS TIME CHECKER</text>
+
 </svg>

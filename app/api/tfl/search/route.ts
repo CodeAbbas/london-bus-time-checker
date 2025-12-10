@@ -34,7 +34,13 @@ export async function GET(request: NextRequest) {
         distance: match.distance,
       })) || []
 
-    return NextResponse.json({ matches: transformedMatches })
+    return NextResponse.json({ matches: transformedMatches },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      }
+    )
   } catch (error) {
     console.error("TfL Search API error:", error)
     return NextResponse.json({ error: "Failed to search bus stops" }, { status: 500 })
