@@ -9,7 +9,6 @@ import dynamic from "next/dynamic"
 import { CompactControls } from "@/components/compact-controls"
 import { ArrivalsPanel } from "@/components/arrivals-panel"
 import { NearbyStopsList } from "@/components/nearby-stops-list"
-import { StatsCard } from "@/components/stats-card"
 // Import the new skeleton
 import { NearbyStopsSkeleton } from "@/components/skeletons"
 
@@ -259,12 +258,6 @@ export default function TfLBusTracker() {
     setShowNearbyList(false)
   }, [])
 
-  const stats = useMemo(
-    () => ({
-      totalStops: nearbyStops.length,
-    }),
-    [nearbyStops.length],
-  )
 
   const allStops = useMemo(
     () => [...nearbyStops, ...busStops.filter((stop) => !nearbyStops.find((ns) => ns.id === stop.id))],
@@ -346,9 +339,6 @@ export default function TfLBusTracker() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 mb-6">
-          <StatsCard icon={MapPin} title="Nearby Stops" value={stats.totalStops} subtitle="Within 500m" color="red" />
-        </div>
 
         <Card className="h-[600px] backdrop-blur-sm bg-white/95 border-0 shadow-xl overflow-hidden">
           <CardHeader className="pb-2">
