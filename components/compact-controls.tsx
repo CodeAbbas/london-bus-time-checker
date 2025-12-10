@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, MapPin, Loader2 } from 'lucide-react'
+import { Search, MapPin, Loader2, Bus } from 'lucide-react'
 
 interface BusStop {
   id: string
@@ -87,22 +87,23 @@ export function CompactControls({
 
   const calculateWalkingTime = (distance?: number) => {
     if (!distance) return null
-    // Average walking speed: ~5 km/h = ~84 m/min
     const walkingTimeMinutes = Math.ceil(distance / 84)
     return `🚶 ${walkingTimeMinutes}min`
   }
 
+  // Helper to get the first letter for the icon
+  const getStopLetter = (name: string) => {
+    return name ? name.charAt(0).toUpperCase() : "B"
+  }
+
   return (
     <div className="w-full relative z-50 mb-6">
-      {/* Integrated Search & Location Bar (Standalone) */}
+      {/* Search Input Bar */}
       <div className="relative group">
-        
-        {/* Left Icon (Search visual cue) */}
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10">
           <Search size={20} />
         </div>
 
-        {/* Main Input Field */}
         <input 
           type="text"
           placeholder="Search for bus stops, routes..."
@@ -118,7 +119,7 @@ export function CompactControls({
             placeholder-gray-500 
             rounded-2xl 
             border-none 
-            
+            shadow-lg 
             outline-none 
             transition-all 
             duration-200
@@ -127,7 +128,6 @@ export function CompactControls({
           "
         />
 
-        {/* Right Action (Location Button) */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
           <Button
             variant="ghost"
@@ -154,41 +154,61 @@ export function CompactControls({
         </div>
       </div>
 
-      {/* Dropdown Results Container - Only renders when needed */}
+      {/* Dropdown Results */}
       {(loading || searchResults.length > 0) && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2 z-50">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2 z-50 animate-fade-in">
           
           {loading && (
             <div className="space-y-2 p-2">
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-xl" />
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
               ))}
             </div>
           )}
 
           {searchResults.length > 0 && !loading && (
-            <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
+            <div className="max-h-[60vh] overflow-y-auto custom-scrollbar space-y-1">
               {searchResults.map((stop, index) => (
                 <Button
                   key={stop.id}
                   variant="ghost"
-                  className="w-full justify-start h-auto p-3 text-left hover:bg-blue-50 transition-all duration-200 rounded-xl group"
+                  className="w-full justify-start h-auto p-3 text-left hover:bg-tfl-gray-50 transition-all duration-200 rounded-xl group border border-transparent hover:border-gray-100"
                   onClick={() => handleStopSelect(stop)}
                 >
-                  <div className="flex items-start gap-3 w-full">
-                    <div className="p-2 bg-blue-50 rounded-full flex-shrink-0 group-hover:bg-blue-100 transition-colors">
-                      <MapPin className="h-4 w-4 text-tfl-blue" />
+                  <div className="flex items-center gap-4 w-full">
+                    
+                    {/* The "Stop Letter" Icon */}
+                    <div className="flex-shrink-0 relative">
+                      {/* Soft shadow/glow effect */}
+                      <div className="absolute inset-0 bg-tfl-red blur-md opacity-20 group-hover:opacity-30 transition-opacity" />
+                      
+                      {/* The Red Box */}
+                      <div className="relative w-12 h-12 bg-gradient-to-br from-tfl-red to-red-600 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
+                        <span className="text-white font-bold text-xl">
+                          {getStopLetter(stop.commonName)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-gray-900 truncate text-sm">{stop.commonName}</div>
-                      <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
-                        <span className="truncate">Stop ID: {stop.id}</span>
+
+                    {/* Text Content */}
+                    <div className="flex-1 min-w-0 py-1">
+                      <div className="font-bold text-tfl-dark text-base truncate leading-tight">
+                        {stop.commonName}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mt-1 text-xs text-tfl-gray-500 font-medium">
+                        {/* Replaced Stop ID with "Bus Stop" label since API doesn't return lines in search */}
+                        <div className="flex items-center gap-1.5 text-tfl-blue bg-blue-50 px-2 py-0.5 rounded-md">
+                          <Bus size={10} />
+                          <span>Bus Stop</span>
+                        </div>
+
                         {stop.distance && (
                           <>
-                            <span className="w-1 h-1 rounded-full bg-gray-300 flex-shrink-0"></span>
-                            <span className="text-tfl-blue font-medium whitespace-nowrap">
-                              {formatDistance(stop.distance)}
-                            </span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300" />
+                            <span>{formatDistance(stop.distance)}</span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300" />
+                            <span>{calculateWalkingTime(stop.distance)}</span>
                           </>
                         )}
                       </div>

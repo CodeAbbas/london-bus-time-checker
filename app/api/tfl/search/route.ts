@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json()
 
-    // Transform the data to match our interface
+    // Transform the data
     const transformedMatches =
       data.matches?.map((match: any) => ({
         id: match.id,
@@ -32,6 +32,11 @@ export async function GET(request: NextRequest) {
         lat: match.lat,
         lon: match.lon,
         distance: match.distance,
+        // The Search API often returns 'modes', we can use this to confirm it's a bus stop
+        modeszh: match.modes || ["bus"], 
+        // Note: Real bus line numbers (e.g. "25, 86") are rarely provided in the *Search* endpoint 
+        // by TfL. We would need a secondary call to get them. 
+        // For now, we will handle the UI to look correct.
       })) || []
 
     return NextResponse.json({ matches: transformedMatches },
