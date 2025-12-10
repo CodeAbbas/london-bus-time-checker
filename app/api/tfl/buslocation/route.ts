@@ -75,7 +75,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ buses: busLocations },
     {
       headers: {
-        // Cache results on Vercel's Edge Network for 15 seconds
         "Cache-Control": "public, s-maxage=15, stale-while-revalidate=15",
       },
     })
