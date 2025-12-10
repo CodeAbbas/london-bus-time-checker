@@ -118,7 +118,7 @@ export function CompactControls({
             placeholder-gray-500 
             rounded-2xl 
             border-none 
-            shadow-lg 
+            
             outline-none 
             transition-all 
             duration-200
