@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MapPin, AlertCircle, Zap, Loader2, Bus } from 'lucide-react'
 import dynamic from "next/dynamic"
 import { CompactControls } from "@/components/compact-controls"
+import { NearbyStopsSkeleton } from "@/components/skeletons"
 import { ArrivalsPanel } from "@/components/arrivals-panel"
 import { NearbyStopsList } from "@/components/nearby-stops-list"
 import { StatsCard } from "@/components/stats-card"
@@ -351,16 +352,7 @@ export default function TfLBusTracker() {
           )}
 
           {/* Loading indicator */}
-          {loading && (
-            <Card className="backdrop-blur-sm bg-white/80 border-0 shadow-xl">
-              <CardContent className="p-6 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
-                <p className="text-timing text-tfl-gray-600" aria-live="polite">
-                  Finding nearby bus stops...
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {loading && <NearbyStopsSkeleton />}
 
           {/* Optimized Nearby Stops List */}
           {!loading && showNearbyList && nearbyStops.length > 0 && (

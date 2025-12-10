@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ArrivalsSkeleton } from "@/components/skeletons"
 import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind } from "lucide-react"
 
 // --- INTERFACES ---
@@ -97,20 +98,7 @@ const EmptyState = memo(
 
 EmptyState.displayName = "EmptyState"
 
-const LoadingSkeleton = memo(() => (
-  <div className="space-y-3">
-    {[...Array(4)].map((_, i) => (
-      <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-tfl-gray-50/50">
-        <Skeleton className="h-12 w-16 rounded-lg" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
-        </div>
-        <Skeleton className="h-8 w-20 rounded-full" />
-      </div>
-    ))}
-  </div>
-))
+
 
 LoadingSkeleton.displayName = "LoadingSkeleton"
 
@@ -314,7 +302,7 @@ export const ArrivalsPanel = memo(
         {/* --- ENHANCED CARD CONTENT --- */}
         <CardContent className="p-5">
           {loading ? (
-            <LoadingSkeleton />
+            <ArrivalsSkeleton />
           ) : sortedLineNames.length > 0 ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">

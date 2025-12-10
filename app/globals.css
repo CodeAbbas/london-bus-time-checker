@@ -111,7 +111,6 @@
     border-width: 3px;
   }
 
-  /* Infinite horizontal scroll animation for mobile-friendly text overflow */
   .animate-infinite-scroll {
     animation: infinite-scroll linear infinite;
     animation-play-state: running;
@@ -137,10 +136,30 @@
     white-space: nowrap;
     border-width: 0;
   }
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(
+      to right,
+      #f6f7f8 0%,
+      #edeef1 20%,
+      #f6f7f8 40%,
+      #f6f7f8 100%
+    );
+    background-size: 1000px 100%;
+  }
 
   /* Focus visible styles for accessibility */
   .focus-visible-ring {
     @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-tfl-red focus-visible:ring-offset-2;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
   }
 }
 
