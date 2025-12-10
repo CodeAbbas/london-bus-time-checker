@@ -187,13 +187,14 @@ const LiveBusTracker = ({ stopId }: { stopId: string | null }) => {
   // Show buses on map
   return (
     <>
-      {buses.map((bus) => (
+      {buses
+        .filter(bus => bus.lat && bus.lon) // Safety filter
+        .map((bus) => (
         <Marker key={bus.id} position={[bus.lat, bus.lon]} icon={busIcon(bus.lineName)}>
           <Popup>
             <div className="text-sm">
               <p className="font-bold mb-1">{bus.lineName} Bus</p>
               <p>Destination: {bus.destination}</p>
-              <p className="text-xs text-gray-500">Vehicle ID: {bus.vehicleId}</p>
             </div>
           </Popup>
         </Marker>
@@ -302,7 +303,9 @@ export default function LeafletMap({ busStops, selectedStop, userLocation, onSto
         )}
 
         {/* Bus stop markers */}
-        {busStops.map((stop) => (
+        {busStops
+        .filter(stop => stop.lat && stop.lon) 
+        .map((stop) => (
           <Marker
             key={stop.id}
             position={[stop.lat, stop.lon]}
