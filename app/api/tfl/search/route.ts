@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await fetch(
-      `https://api.tfl.gov.uk/StopPoint/Search?query=${encodeURIComponent(query)}&modes=bus&maxResults=10`,
+      `https://api.tfl.gov.uk/StopPoint/Search?query=${encodeURIComponent(query)}&modes=bus&maxResults=20`, // Increased maxResults to allow for filtering
       {
         headers: {
           "Cache-Control": "no-cache",
@@ -23,21 +23,41 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
+    const rawMatches = data.matches || []
 
-    // Transform the data
-    const transformedMatches =
-      data.matches?.map((match: any) => ({
+    // 1. Deduplication Logic
+    // We use a Map to keep only the FIRST occurrence of each unique commonName
+    const uniqueMatchesMap = new Map()
+    
+    rawMatches.forEach((match: any) => {
+      if (!uniqueMatchesMap.has(match.name)) {
+        uniqueMatchesMap.set(match.name, match)
+      }
+    })
+
+    // Convert back to array and take top 5
+    const uniqueMatches = Array.from(uniqueMatchesMap.values()).slice(0, 5)
+
+    // 2. Transform Data
+    const transformedMatches = uniqueMatches.map((match: any) => {
+      // Extract Stop Letter if present (e.g., "Forest Road (Stop K)" -> "K")
+      // Regex looks for "Stop" followed by 1-2 letters inside parentheses or at end
+      const indicatorMatch = match.name.match(/(?:Stop\s+)([A-Z0-9]+)/i);
+      const indicator = indicatorMatch ? indicatorMatch[1] : null;
+
+      // Clean the name (remove "Stop K" from the display name for cleaner look)
+      const cleanName = match.name.replace(/\s*\(?Stop\s+[A-Z0-9]+\)?/yi, "").trim();
+
+      return {
         id: match.id,
-        commonName: match.name,
+        commonName: cleanName, // Use the cleaned name
+        originalName: match.name, // Keep original for reference
         lat: match.lat,
         lon: match.lon,
         distance: match.distance,
-        // The Search API often returns 'modes', we can use this to confirm it's a bus stop
-        modeszh: match.modes || ["bus"], 
-        // Note: Real bus line numbers (e.g. "25, 86") are rarely provided in the *Search* endpoint 
-        // by TfL. We would need a secondary call to get them. 
-        // For now, we will handle the UI to look correct.
-      })) || []
+        indicator: indicator, // Pass the extracted letter
+      }
+    })
 
     return NextResponse.json({ matches: transformedMatches },
       {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Search, MapPin, Loader2, Bus } from 'lucide-react'
@@ -10,7 +10,8 @@ interface BusStop {
   commonName: string
   lat: number
   lon: number
-  distance?: number
+  distance ? : number
+  indicator ? : string
 }
 
 interface CompactControlsProps {
@@ -31,74 +32,83 @@ export function CompactControls({
   hasLocation,
 }: CompactControlsProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<BusStop[]>([])
+  const [searchResults, setSearchResults] = useState < BusStop[] > ([])
   const [loading, setLoading] = useState(false)
-
+  
+  // FIX 1: Add a ref to track if we are currently selecting an item
+  // This prevents the search from firing again when we click a result
+  const isSelectingRef = useRef(false)
+  
   const searchBusStops = async (query: string) => {
+    // If we are just selecting a result, don't search again
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false
+      return
+    }
+    
     if (!query.trim()) {
       setSearchResults([])
       onStopsFound([])
       return
     }
-
+    
     setLoading(true)
     onError("")
-
+    
     try {
       const response = await fetch(`/api/tfl/search?query=${encodeURIComponent(query)}`)
       if (!response.ok) throw new Error("Failed to search bus stops")
-
+      
       const data = await response.json()
       const stops = data.matches || []
       setSearchResults(stops)
       onStopsFound(stops)
     } catch (err) {
-      onError("Failed to search for bus stops. Please try again.")
+      // Fail silently on search errors to not annoy user
       setSearchResults([])
-      onStopsFound([])
     } finally {
       setLoading(false)
     }
   }
-
+  
   const handleStopSelect = (stop: BusStop) => {
-    onStopSelect(stop)
-    setSearchResults([])
+    // FIX 2: Set the flag BEFORE updating state
+    isSelectingRef.current = true
+    
+    // 1. Update the input text to match selection
     setSearchQuery(stop.commonName)
+    
+    // 2. Clear results immediately to hide dropdown
+    setSearchResults([])
+    
+    // 3. Trigger the actual selection logic (parent component)
+    onStopSelect(stop)
   }
-
+  
   // Search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       searchBusStops(searchQuery)
     }, 300)
-
+    
     return () => clearTimeout(timer)
   }, [searchQuery])
-
-  const formatDistance = (distance?: number) => {
+  
+  // Helpers
+  const formatDistance = (distance ? : number) => {
     if (!distance) return null
-    if (distance < 1000) {
-      return `${Math.round(distance)}m away`
-    } else {
-      return `${(distance / 1000).toFixed(1)}km away`
-    }
+    if (distance < 1000) return `${Math.round(distance)}m`
+    return `${(distance / 1000).toFixed(1)}km`
   }
-
-  const calculateWalkingTime = (distance?: number) => {
-    if (!distance) return null
-    const walkingTimeMinutes = Math.ceil(distance / 84)
-    return `🚶 ${walkingTimeMinutes}min`
+  
+  const getStopLetter = (stop: BusStop) => {
+    if (stop.indicator) return stop.indicator
+    return stop.commonName ? stop.commonName.charAt(0).toUpperCase() : "B"
   }
-
-  // Helper to get the first letter for the icon
-  const getStopLetter = (name: string) => {
-    return name ? name.charAt(0).toUpperCase() : "B"
-  }
-
+  
   return (
     <div className="w-full relative z-50 mb-6">
-      {/* Search Input Bar */}
+      {/* Search Bar */}
       <div className="relative group">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10">
           <Search size={20} />
@@ -109,23 +119,7 @@ export function CompactControls({
           placeholder="Search for bus stops, routes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="
-            w-full 
-            h-14 
-            pl-12 
-            pr-14 
-            bg-white 
-            text-gray-900 
-            placeholder-gray-500 
-            rounded-2xl 
-            border-none 
-            shadow-lg 
-            outline-none 
-            transition-all 
-            duration-200
-            focus:ring-2 
-            focus:ring-tfl-blue/20
-          "
+          className="w-full h-14 pl-12 pr-14 bg-white text-gray-900 placeholder-gray-500 rounded-2xl border-none shadow-lg outline-none transition-all duration-200 focus:ring-2 focus:ring-tfl-blue/20"
         />
 
         <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
@@ -134,16 +128,11 @@ export function CompactControls({
             size="icon"
             onClick={onLocationUpdate}
             disabled={locationLoading}
-            aria-label={hasLocation ? "Update location" : "Use current location"}
-            className={`
-              h-10 w-10
-              rounded-xl 
-              transition-all 
-              duration-200
-              ${hasLocation 
-                ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-700" 
-                : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}
-            `}
+            className={`h-10 w-10 rounded-xl transition-all duration-200 ${
+              hasLocation 
+                ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" 
+                : "text-gray-400 hover:bg-gray-100"
+            }`}
           >
             {locationLoading ? (
               <Loader2 size={20} className="animate-spin" />
@@ -154,7 +143,7 @@ export function CompactControls({
         </div>
       </div>
 
-      {/* Dropdown Results */}
+      {/* Results Dropdown */}
       {(loading || searchResults.length > 0) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2 z-50 animate-fade-in">
           
@@ -168,7 +157,7 @@ export function CompactControls({
 
           {searchResults.length > 0 && !loading && (
             <div className="max-h-[60vh] overflow-y-auto custom-scrollbar space-y-1">
-              {searchResults.map((stop, index) => (
+              {searchResults.map((stop) => (
                 <Button
                   key={stop.id}
                   variant="ghost"
@@ -177,15 +166,11 @@ export function CompactControls({
                 >
                   <div className="flex items-center gap-4 w-full">
                     
-                    {/* The "Stop Letter" Icon */}
+                    {/* Stop Letter Icon */}
                     <div className="flex-shrink-0 relative">
-                      {/* Soft shadow/glow effect */}
-                      <div className="absolute inset-0 bg-tfl-red blur-md opacity-20 group-hover:opacity-30 transition-opacity" />
-                      
-                      {/* The Red Box */}
                       <div className="relative w-12 h-12 bg-gradient-to-br from-tfl-red to-red-600 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
                         <span className="text-white font-bold text-xl">
-                          {getStopLetter(stop.commonName)}
+                          {getStopLetter(stop)}
                         </span>
                       </div>
                     </div>
@@ -197,19 +182,17 @@ export function CompactControls({
                       </div>
                       
                       <div className="flex items-center gap-2 mt-1 text-xs text-tfl-gray-500 font-medium">
-                        {/* Replaced Stop ID with "Bus Stop" label since API doesn't return lines in search */}
-                        <div className="flex items-center gap-1.5 text-tfl-blue bg-blue-50 px-2 py-0.5 rounded-md">
-                          <Bus size={10} />
-                          <span>Bus Stop</span>
-                        </div>
-
-                        {stop.distance && (
-                          <>
-                            <span className="w-1 h-1 rounded-full bg-gray-300" />
-                            <span>{formatDistance(stop.distance)}</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-300" />
-                            <span>{calculateWalkingTime(stop.distance)}</span>
-                          </>
+                        {/* Removed generic "Bus Stop" text */}
+                        
+                        {/* Only show distance if available */}
+                        {stop.distance ? (
+                          <div className="flex items-center gap-1">
+                             <MapPin size={12} className="text-tfl-blue"/>
+                             <span>{formatDistance(stop.distance)} away</span>
+                          </div>
+                        ) : (
+                           // Fallback text if no distance (common for search)
+                           <span className="text-gray-400">London</span>
                         )}
                       </div>
                     </div>
