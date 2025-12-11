@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, MapPin, Loader2, Navigation, Heart } from 'lucide-react'
+import { Search, MapPin, Loader2, Navigation } from 'lucide-react'
 
-// Interface matching the enriched API
+// Updated Interface to match rich API data
 interface BusStop {
   id: string
   commonName: string
@@ -37,54 +37,11 @@ export function CompactControls({
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<BusStop[]>([])
   const [loading, setLoading] = useState(false)
-  const [favorites, setFavorites] = useState<BusStop[]>([])
-  const [showFavorites, setShowFavorites] = useState(false)
-  
   const isSelectingRef = useRef(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // --- FAVORITES LOGIC ---
-  const loadFavorites = async () => {
-    const favIds = JSON.parse(localStorage.getItem("tfl-favorites") || "[]")
-    
-    if (favIds.length === 0) {
-      setFavorites([])
-      return
-    }
-    
-    // We only need to fetch if we have IDs
-    try {
-      const response = await fetch(`https://api.tfl.gov.uk/StopPoint/${favIds.join(",")}`)
-      if (response.ok) {
-        const data = await response.json()
-        // Handle array vs single object quirk from TfL
-        const stopsData = Array.isArray(data) ? data : [data]
-        
-        const mappedFavorites = stopsData.map((s: any) => ({
-           id: s.naptanId || s.id,
-           commonName: s.commonName,
-           lat: s.lat,
-           lon: s.lon,
-           indicator: s.indicator?.replace("Stop ", "").trim(),
-           towards: s.additionalProperties?.find((p: any) => p.key === "Towards")?.value,
-           lines: s.lines?.map((l: any) => l.name) || []
-        }))
-        setFavorites(mappedFavorites)
-      }
-    } catch (e) {
-      console.error("Error loading favorites", e)
-    }
-  }
-
-  useEffect(() => {
-    loadFavorites()
-    window.addEventListener("favorites-updated", loadFavorites)
-    return () => window.removeEventListener("favorites-updated", loadFavorites)
-  }, [])
-
-  // --- SEARCH LOGIC ---
   const searchBusStops = async (query: string) => {
-    if (isSelectingRef.current) return
+    if (isSelectingRef.current) return // Don't search if we just clicked
 
     if (!query.trim()) {
       setSearchResults([])
@@ -96,7 +53,7 @@ export function CompactControls({
     onError("")
 
     try {
-      const response = await fetch(`/api/tfl/search?query=${encodeURIComponent(query)}&t=${Date.now()}`)
+      const response = await fetch(`/api/tfl/search?query=${encodeURIComponent(query)}`)
       if (!response.ok) throw new Error("Failed to search bus stops")
 
       const data = await response.json()
@@ -113,10 +70,10 @@ export function CompactControls({
   const handleStopSelect = (stop: BusStop) => {
     isSelectingRef.current = true
     setSearchQuery(stop.commonName)
-    setSearchResults([]) 
-    setShowFavorites(false)
+    setSearchResults([]) // Force close dropdown
     onStopSelect(stop)
     
+    // Reset selection lock after a short delay
     setTimeout(() => {
       isSelectingRef.current = false
     }, 500)
@@ -125,15 +82,15 @@ export function CompactControls({
   useEffect(() => {
     const timer = setTimeout(() => {
       searchBusStops(searchQuery)
-    }, 400)
+    }, 400) // Slightly longer debounce for the heavier API call
     return () => clearTimeout(timer)
   }, [searchQuery])
 
+  // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setSearchResults([])
-        setShowFavorites(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -141,6 +98,7 @@ export function CompactControls({
   }, [])
 
   const getStopLetter = (stop: BusStop) => {
+    // Prioritize the API indicator, fallback to first letter of name
     return stop.indicator || (stop.commonName ? stop.commonName.charAt(0).toUpperCase() : "B")
   }
 
@@ -154,15 +112,11 @@ export function CompactControls({
 
         <input 
           type="text"
-          placeholder="Search for bus stops..."
+          placeholder="Search for bus stops, routes..."
           value={searchQuery}
-          onFocus={() => {
-            if (!searchQuery) setShowFavorites(true)
-          }}
           onChange={(e) => {
-             isSelectingRef.current = false
+             isSelectingRef.current = false // Unlock on typing
              setSearchQuery(e.target.value)
-             setShowFavorites(false)
           }}
           className="w-full h-14 pl-12 pr-14 bg-white text-gray-900 placeholder-gray-500 rounded-2xl border-none shadow-lg outline-none transition-all duration-200 focus:ring-2 focus:ring-tfl-blue/20"
         />
@@ -188,50 +142,10 @@ export function CompactControls({
         </div>
       </div>
 
-      {/* DROPDOWN CONTAINER */}
-      {((loading || searchResults.length > 0) || (showFavorites && favorites.length > 0)) && (
+      {/* Results Dropdown */}
+      {(loading || searchResults.length > 0) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2 z-50 animate-fade-in">
           
-          {/* 1. FAVORITES SECTION */}
-          {showFavorites && favorites.length > 0 && !searchQuery && (
-            <div className="mb-2">
-              <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                <Heart size={12} className="fill-current text-tfl-red" />
-                Saved Stops
-              </div>
-              <div className="max-h-[40vh] overflow-y-auto custom-scrollbar space-y-1">
-                {favorites.map((stop) => (
-                  <Button
-                    key={stop.id}
-                    variant="ghost"
-                    className="w-full justify-start h-auto p-3 text-left hover:bg-rose-50 transition-all duration-200 rounded-xl group border border-transparent hover:border-rose-100"
-                    onClick={() => handleStopSelect(stop)}
-                  >
-                    <div className="flex items-start gap-3 w-full">
-                      <div className="flex-shrink-0 mt-1">
-                        <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
-                           <Heart size={14} className="text-tfl-red fill-tfl-red" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-tfl-dark text-sm truncate">
-                          {stop.commonName}
-                        </div>
-                        {stop.towards && (
-                          <div className="text-xs text-tfl-gray-500 truncate">
-                            towards {stop.towards}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-              <div className="h-px bg-gray-100 my-2" />
-            </div>
-          )}
-
-          {/* 2. LOADING STATE */}
           {loading && (
             <div className="space-y-2 p-2">
               {[...Array(3)].map((_, i) => (
@@ -240,7 +154,6 @@ export function CompactControls({
             </div>
           )}
 
-          {/* 3. SEARCH RESULTS */}
           {searchResults.length > 0 && !loading && (
             <div className="max-h-[60vh] overflow-y-auto custom-scrollbar space-y-1">
               {searchResults.map((stop) => (
@@ -263,23 +176,22 @@ export function CompactControls({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
+                      {/* Name */}
                       <div className="font-bold text-tfl-dark text-base truncate">
                         {stop.commonName}
                       </div>
                       
-                      {stop.towards ? (
+                      {/* Towards Information (The missing link!) */}
+                      {stop.towards && (
                         <div className="flex items-center gap-1.5 text-sm text-tfl-gray-600 mt-0.5">
                           <Navigation size={12} className="text-tfl-gray-400 rotate-90" />
                           <span className="truncate font-medium">
                             towards {stop.towards}
                           </span>
                         </div>
-                      ) : (
-                         <div className="flex items-center gap-1.5 text-sm text-tfl-gray-400 mt-0.5">
-                          <span className="truncate font-medium">London</span>
-                        </div>
                       )}
 
+                      {/* Bus Lines Row */}
                       {stop.lines && stop.lines.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {stop.lines.map((line) => (
