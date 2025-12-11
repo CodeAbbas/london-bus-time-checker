@@ -1,11 +1,10 @@
 "use client"
 
-import { memo, useMemo, useCallback } from "react"
+import { memo, useMemo, useCallback, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind } from "lucide-react"
-// Import the new skeleton
+import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind, Heart } from "lucide-react"
 import { ArrivalsSkeleton } from "@/components/skeletons"
 
 // --- INTERFACES ---
@@ -71,6 +70,39 @@ const getTowardsDestination = (stop: BusStop) => {
 
 const getStopIndicator = (stop: BusStop) => {
   return stop.indicator?.replace("Stop ", "").trim() || "BUS"
+}
+
+// --- CUSTOM HOOK FOR FAVORITES ---
+const useFavorite = (stopId: string | undefined) => {
+  const [isFavorite, setIsFavorite] = useState(false)
+
+  useEffect(() => {
+    if (!stopId) return
+    const favorites = JSON.parse(localStorage.getItem("tfl-favorites") || "[]")
+    setIsFavorite(favorites.includes(stopId))
+  }, [stopId])
+
+  const toggleFavorite = () => {
+    if (!stopId) return
+    
+    const favorites = JSON.parse(localStorage.getItem("tfl-favorites") || "[]")
+    let newFavorites
+    
+    if (favorites.includes(stopId)) {
+      newFavorites = favorites.filter((id: string) => id !== stopId)
+      setIsFavorite(false)
+    } else {
+      newFavorites = [...favorites, stopId]
+      setIsFavorite(true)
+    }
+    
+    localStorage.setItem("tfl-favorites", JSON.stringify(newFavorites))
+    
+    // Dispatch event so other components (like Search) know to update
+    window.dispatchEvent(new Event("favorites-updated"))
+  }
+
+  return { isFavorite, toggleFavorite }
 }
 
 // --- MEMOIZED COMPONENTS ---
@@ -201,6 +233,8 @@ export const ArrivalsPanel = memo(
       }
     }, [selectedStop, arrivals])
 
+    const { isFavorite, toggleFavorite } = useFavorite(selectedStop?.id)
+
     const handleRefresh = useCallback(() => {
       onRefresh()
     }, [onRefresh])
@@ -252,17 +286,30 @@ export const ArrivalsPanel = memo(
               </div>
             </div>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex-shrink-0 h-10 w-10 text-tfl-gray-500 hover:bg-white hover:shadow-md transition-all duration-200 rounded-xl"
-              aria-label="Refresh arrival times"
-            >
-              <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
-              <span className="sr-only">Refresh arrival times</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={toggleFavorite}
+                className={`flex-shrink-0 h-10 w-10 hover:bg-white hover:shadow-md transition-all duration-200 rounded-xl ${
+                  isFavorite ? "text-tfl-red" : "text-tfl-gray-400"
+                }`}
+                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleRefresh}
+                disabled={loading}
+                className="flex-shrink-0 h-10 w-10 text-tfl-gray-500 hover:bg-white hover:shadow-md transition-all duration-200 rounded-xl"
+                aria-label="Refresh arrival times"
+              >
+                <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between text-xs text-tfl-gray-600 mt-4 pt-3 border-t border-tfl-gray-200/50">

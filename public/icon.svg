@@ -1,88 +1,79 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    :root {
-      --bg-color: #ffffff;
-      --text-main: #002654; /* Navy Blue */
-      --text-sub: #707070;  /* Grey */
-      --bus-red: #E62321;   /* TfL Red */
-      --wheel-inner: #ffffff;
-    }
+  <rect width="180" height="180" rx="42" fill="#E62321" />
+  
+  <g transform="translate(32, 58)">
+    <path fill="#FFFFFF" fill-rule="evenodd" clip-rule="evenodd" d="
+      M 12, 0
+      C 4, 0, 0, 5, 0, 14
+      V 48
+      C 0, 58, 6, 62, 14, 62
+      H 18
+      A 12,12 0 0 1 42, 62
+      H 74
+      A 12,12 0 0 1 98, 62
+      H 102
+      C 112, 62, 116, 55, 116, 45
+      L 112, 25
+      C 110, 10, 105, 0, 90, 0
+      H 12
+      Z
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-color: #121212;
-        --text-main: #ffffff;
-        --text-sub: #bbbbbb;
-        --wheel-inner: #121212;
-      }
-    }
+      M 11, 8
+      H 33
+      A 2,2 0 0 1 35, 10
+      V 28
+      A 2,2 0 0 1 33, 30
+      H 11
+      A 2,2 0 0 1 9, 28
+      V 10
+      A 2,2 0 0 1 11, 8
+      Z
 
-    .background { fill: var(--bg-color); }
-    .title-text { 
-      font-family: Arial, Helvetica, sans-serif; 
-      font-weight: 900; 
-      font-size: 24px; 
-      fill: var(--text-main); 
-    }
-    .subtitle-text { 
-      font-family: Arial, Helvetica, sans-serif; 
-      font-weight: bold; 
-      font-size: 13px; 
-      letter-spacing: 0.5px;
-      fill: var(--text-sub); 
-      text-anchor: middle;
-    }
-    .bus-body { fill: var(--bus-red); }
-    .clock-stroke { stroke: var(--bus-red); stroke-width: 3; fill: none; }
-    .clock-fill { fill: var(--bus-red); }
-    .wheel { fill: var(--text-main); }
-    .wheel-center { fill: var(--wheel-inner); }
-  </style>
+      M 43, 8
+      H 65
+      A 2,2 0 0 1 67, 10
+      V 28
+      A 2,2 0 0 1 65, 30
+      H 43
+      A 2,2 0 0 1 41, 28
+      V 10
+      A 2,2 0 0 1 43, 8
+      Z
 
-  <rect class="background" width="180" height="180" rx="30" />
-
-  <g transform="translate(12, 48)">
-    <text x="0" y="0" class="title-text">L</text>
-    <text x="42" y="0" class="title-text">NDON LIVE</text>
-    
-    <g transform="translate(28, -8)">
-       <circle cx="0" cy="0" r="9" class="clock-stroke" />
-       <path d="M0,-5 V0 L4,4" stroke="#E62321" stroke-width="3" stroke-linecap="round" fill="none" />
-       <path d="M3,3 L6,6 L7,2 Z" class="clock-fill" />
-    </g>
-  </g>
-
-  <g transform="translate(15, 65)">
-    <path class="bus-body" fill-rule="evenodd" d="
-      M5,0 
-      H135 A10,10 0 0 1 145,10 
-      V15 
-      L150,25 
-      V55 A5,5 0 0 1 145,60 
-      H125 
-      H105 
-      H45 
-      H25 
-      H5 A5,5 0 0 1 0,55 
-      V5 A5,5 0 0 1 5,0 
+      M 75, 8
+      H 90
+      C 95, 8, 98, 12, 99, 18
+      L 101, 28
+      A 2,2 0 0 1 99, 30
+      H 75
+      A 2,2 0 0 1 73, 28
+      V 10
+      A 2,2 0 0 1 75, 8
       Z
       
-      M10,10 H35 V30 H10 V10 Z
-      M42,10 H67 V30 H42 V10 Z
-      M74,10 H99 V30 H74 V10 Z
-      M106,10 H135 V30 H106 V10 Z
+      M 9, 38 H 108 V 42 H 9 V 38 Z
     " />
     
-    <g transform="translate(35, 60)">
-      <circle r="9" class="wheel" />
-      <circle r="4" class="wheel-center" />
-    </g>
-    <g transform="translate(115, 60)">
-      <circle r="9" class="wheel" />
-      <circle r="4" class="wheel-center" />
-    </g>
+    <path fill="#FFFFFF" fill-rule="evenodd" clip-rule="evenodd" d="
+      M 30, 62
+      A 10,10 0 1 0 30, 82
+      A 10,10 0 1 0 30, 62
+      Z
+      M 30, 68
+      A 4,4 0 1 1 30, 76
+      A 4,4 0 1 1 30, 68
+      Z
+    " />
+    
+    <path fill="#FFFFFF" fill-rule="evenodd" clip-rule="evenodd" d="
+      M 86, 62
+      A 10,10 0 1 0 86, 82
+      A 10,10 0 1 0 86, 62
+      Z
+      M 86, 68
+      A 4,4 0 1 1 86, 76
+      A 4,4 0 1 1 86, 68
+      Z
+    " />
   </g>
-
-  <text x="90" y="155" class="subtitle-text">BUS TIME CHECKER</text>
-
 </svg>
