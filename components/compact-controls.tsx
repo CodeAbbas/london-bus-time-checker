@@ -3,15 +3,18 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, MapPin, Loader2, Bus } from 'lucide-react'
+import { Search, MapPin, Loader2, Navigation } from 'lucide-react'
 
+// Updated Interface to match rich API data
 interface BusStop {
   id: string
   commonName: string
   lat: number
   lon: number
-  distance ? : number
-  indicator ? : string
+  distance?: number
+  indicator?: string
+  towards?: string
+  lines?: string[]
 }
 
 interface CompactControlsProps {
@@ -32,82 +35,75 @@ export function CompactControls({
   hasLocation,
 }: CompactControlsProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState < BusStop[] > ([])
+  const [searchResults, setSearchResults] = useState<BusStop[]>([])
   const [loading, setLoading] = useState(false)
-  
-  // FIX 1: Add a ref to track if we are currently selecting an item
-  // This prevents the search from firing again when we click a result
   const isSelectingRef = useRef(false)
-  
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   const searchBusStops = async (query: string) => {
-    // If we are just selecting a result, don't search again
-    if (isSelectingRef.current) {
-      isSelectingRef.current = false
-      return
-    }
-    
+    if (isSelectingRef.current) return // Don't search if we just clicked
+
     if (!query.trim()) {
       setSearchResults([])
       onStopsFound([])
       return
     }
-    
+
     setLoading(true)
     onError("")
-    
+
     try {
       const response = await fetch(`/api/tfl/search?query=${encodeURIComponent(query)}`)
       if (!response.ok) throw new Error("Failed to search bus stops")
-      
+
       const data = await response.json()
       const stops = data.matches || []
       setSearchResults(stops)
       onStopsFound(stops)
     } catch (err) {
-      // Fail silently on search errors to not annoy user
       setSearchResults([])
     } finally {
       setLoading(false)
     }
   }
-  
+
   const handleStopSelect = (stop: BusStop) => {
-    // FIX 2: Set the flag BEFORE updating state
     isSelectingRef.current = true
-    
-    // 1. Update the input text to match selection
     setSearchQuery(stop.commonName)
-    
-    // 2. Clear results immediately to hide dropdown
-    setSearchResults([])
-    
-    // 3. Trigger the actual selection logic (parent component)
+    setSearchResults([]) // Force close dropdown
     onStopSelect(stop)
+    
+    // Reset selection lock after a short delay
+    setTimeout(() => {
+      isSelectingRef.current = false
+    }, 500)
   }
-  
-  // Search with debounce
+
   useEffect(() => {
     const timer = setTimeout(() => {
       searchBusStops(searchQuery)
-    }, 300)
-    
+    }, 400) // Slightly longer debounce for the heavier API call
     return () => clearTimeout(timer)
   }, [searchQuery])
-  
-  // Helpers
-  const formatDistance = (distance ? : number) => {
-    if (!distance) return null
-    if (distance < 1000) return `${Math.round(distance)}m`
-    return `${(distance / 1000).toFixed(1)}km`
-  }
-  
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setSearchResults([])
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   const getStopLetter = (stop: BusStop) => {
-    if (stop.indicator) return stop.indicator
-    return stop.commonName ? stop.commonName.charAt(0).toUpperCase() : "B"
+    // Prioritize the API indicator, fallback to first letter of name
+    return stop.indicator || (stop.commonName ? stop.commonName.charAt(0).toUpperCase() : "B")
   }
-  
+
   return (
-    <div className="w-full relative z-50 mb-6">
+    <div className="w-full relative z-50 mb-6" ref={dropdownRef}>
       {/* Search Bar */}
       <div className="relative group">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10">
@@ -118,7 +114,10 @@ export function CompactControls({
           type="text"
           placeholder="Search for bus stops, routes..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+             isSelectingRef.current = false // Unlock on typing
+             setSearchQuery(e.target.value)
+          }}
           className="w-full h-14 pl-12 pr-14 bg-white text-gray-900 placeholder-gray-500 rounded-2xl border-none shadow-lg outline-none transition-all duration-200 focus:ring-2 focus:ring-tfl-blue/20"
         />
 
@@ -150,7 +149,7 @@ export function CompactControls({
           {loading && (
             <div className="space-y-2 p-2">
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                <Skeleton key={i} className="h-20 w-full rounded-xl" />
               ))}
             </div>
           )}
@@ -164,37 +163,47 @@ export function CompactControls({
                   className="w-full justify-start h-auto p-3 text-left hover:bg-tfl-gray-50 transition-all duration-200 rounded-xl group border border-transparent hover:border-gray-100"
                   onClick={() => handleStopSelect(stop)}
                 >
-                  <div className="flex items-center gap-4 w-full">
+                  <div className="flex items-start gap-3 w-full">
                     
                     {/* Stop Letter Icon */}
-                    <div className="flex-shrink-0 relative">
-                      <div className="relative w-12 h-12 bg-gradient-to-br from-tfl-red to-red-600 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
-                        <span className="text-white font-bold text-xl">
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-10 h-10 bg-gradient-to-br from-tfl-red to-red-600 rounded-lg flex items-center justify-center shadow-sm">
+                        <span className="text-white font-bold text-lg">
                           {getStopLetter(stop)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Text Content */}
-                    <div className="flex-1 min-w-0 py-1">
-                      <div className="font-bold text-tfl-dark text-base truncate leading-tight">
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Name */}
+                      <div className="font-bold text-tfl-dark text-base truncate">
                         {stop.commonName}
                       </div>
                       
-                      <div className="flex items-center gap-2 mt-1 text-xs text-tfl-gray-500 font-medium">
-                        {/* Removed generic "Bus Stop" text */}
-                        
-                        {/* Only show distance if available */}
-                        {stop.distance ? (
-                          <div className="flex items-center gap-1">
-                             <MapPin size={12} className="text-tfl-blue"/>
-                             <span>{formatDistance(stop.distance)} away</span>
-                          </div>
-                        ) : (
-                           // Fallback text if no distance (common for search)
-                           <span className="text-gray-400">London</span>
-                        )}
-                      </div>
+                      {/* Towards Information (The missing link!) */}
+                      {stop.towards && (
+                        <div className="flex items-center gap-1.5 text-sm text-tfl-gray-600 mt-0.5">
+                          <Navigation size={12} className="text-tfl-gray-400 rotate-90" />
+                          <span className="truncate font-medium">
+                            towards {stop.towards}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Bus Lines Row */}
+                      {stop.lines && stop.lines.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {stop.lines.map((line) => (
+                            <span 
+                              key={line}
+                              className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-tfl-blue border border-blue-100"
+                            >
+                              {line}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Button>
