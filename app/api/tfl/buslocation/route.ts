@@ -9,74 +9,59 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // Get arrivals for the stop to know which bus lines to track
+    // 1. Get arrivals to identify active vehicles
     const arrivalsResponse = await fetch(`https://api.tfl.gov.uk/StopPoint/${stopId}/Arrivals`, {
-      headers: {
-        "Cache-Control": "no-cache",
-      },
+      headers: { "Cache-Control": "no-cache" },
     })
     
-    if (!arrivalsResponse.ok) {
-      throw new Error(`TfL API error: ${arrivalsResponse.status}`)
-    }
-    
+    if (!arrivalsResponse.ok) throw new Error(`TfL API error: ${arrivalsResponse.status}`)
     const arrivalsData = await arrivalsResponse.json()
     
-    // Extract vehicle IDs from arrivals
-    const vehicleIds = arrivalsData.filter((arrival: any) => arrival.vehicleId).map((arrival: any) => arrival.vehicleId)
+    // Extract unique vehicles
+    const vehicleIds = [...new Set(arrivalsData
+      .filter((a: any) => a.vehicleId)
+      .map((a: any) => a.vehicleId))]
     
-    // If no vehicle IDs, return empty array
-    if (vehicleIds.length === 0) {
-      return NextResponse.json({ buses: [] })
-    }
+    if (vehicleIds.length === 0) return NextResponse.json({ buses: [] })
     
-    // Get unique vehicle IDs to avoid duplicate requests
-    const uniqueVehicleIds = [...new Set(vehicleIds)]
+    // 2. Fetch details for top 5 buses
+    const busesToTrack = vehicleIds.slice(0, 5)
     
-    // Get locations for up to 5 buses to avoid overloading
-    const busesToTrack = uniqueVehicleIds.slice(0, 5)
-    
-    // Fetch bus locations in parallel
     const busPromises = busesToTrack.map(async (vehicleId) => {
       try {
         const response = await fetch(`https://api.tfl.gov.uk/Vehicle/${vehicleId}/Arrivals`, {
-          headers: {
-            "Cache-Control": "no-cache",
-          },
+          headers: { "Cache-Control": "no-cache" },
         })
         
         if (!response.ok) return null
-        
         const data = await response.json()
         
-        // Some vehicles might not have location data
+        // Safety check
         if (!data || !data[0]) return null
         
+        // Use the most recent prediction for location
         const busInfo = data[0]
         
         if (!busInfo.lat || !busInfo.lon) return null
         
         return {
-          id: vehicleId,
+          id: vehicleId as string,
           lineName: busInfo.lineName,
           vehicleId: busInfo.vehicleId,
           lat: busInfo.lat,
           lon: busInfo.lon,
           destination: busInfo.destinationName,
+          bearing: busInfo.bearing || 0, // Capture the bearing
         }
       } catch (e) {
-        console.error(`Error fetching bus ${vehicleId} location:`, e)
         return null
       }
     })
     
     const busLocations = (await Promise.all(busPromises)).filter(Boolean)
     
-    return NextResponse.json({ buses: busLocations },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=15, stale-while-revalidate=15",
-      },
+    return NextResponse.json({ buses: busLocations }, {
+      headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=15" },
     })
   } catch (error) {
     console.error("TfL Bus Location API error:", error)

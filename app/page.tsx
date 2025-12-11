@@ -344,7 +344,7 @@ export default function TfLBusTracker() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-header">
               <MapPin className="h-5 w-5 text-tfl-red" aria-hidden="true" />
-              {selectedStop ? "Live Bus Map" : "Interactive Map"}
+              {selectedStop ? "Live Bus Map" : "Map"}
               {userLocation && (
                 <Badge variant="secondary" className="ml-auto">
                   <Zap className="h-3 w-3 mr-1" aria-hidden="true" />
