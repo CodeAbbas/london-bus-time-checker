@@ -61,7 +61,7 @@ export function useBusArrivals(stopId?: string) {
     if (!data) return EMPTY_ARRIVALS
     return data.arrivals.map((arrival) => ({
       ...arrival,
-      timeToStation: Math.max(0, Math.floor((Date.parse(arrival.expectedArrival) - now) / 60_000)) * 60,
+      timeToStation: Math.max(0, Math.floor((Date.parse(arrival.expectedArrival) - now) / 60_000)),
     })).sort((a, b) => Date.parse(a.expectedArrival) - Date.parse(b.expectedArrival))
   }, [data, now])
   const refresh = useCallback(() => { void mutate() }, [mutate])

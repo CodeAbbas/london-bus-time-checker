@@ -41,21 +41,20 @@ interface ArrivalsPanelProps {
 }
 
 // --- UTILITY FUNCTIONS ---
-const formatArrivalTime = (seconds: number) => {
-  if (seconds < 60) return "Due"
-  const minutes = Math.floor(seconds / 60)
+const formatArrivalTime = (minutes: number) => {
+  if (minutes <= 0) return "Due"
   return `${minutes}min`
 }
 
-const getArrivalColor = (seconds: number) => {
-  if (seconds < 120) return "bg-tfl-red"
-  if (seconds < 300) return "bg-amber-500"
+const getArrivalColor = (minutes: number) => {
+  if (minutes <= 1) return "bg-tfl-red"
+  if (minutes <= 5) return "bg-amber-500"
   return "bg-emerald-500"
 }
 
-const getArrivalTextColor = (seconds: number) => {
-  if (seconds < 120) return "text-tfl-red"
-  if (seconds < 300) return "text-amber-600"
+const getArrivalTextColor = (minutes: number) => {
+  if (minutes <= 1) return "text-tfl-red"
+  if (minutes <= 5) return "text-amber-600"
   return "text-emerald-600"
 }
 
@@ -177,7 +176,7 @@ const ArrivalRow = memo(
             <div className={`font-black text-xl ${getArrivalTextColor(nextBus.timeToStation)}`} aria-live="polite">
               {formatArrivalTime(nextBus.timeToStation)}
             </div>
-            {nextBus.timeToStation >= 60 && (
+            {nextBus.timeToStation > 0 && (
               <div className="text-xs text-tfl-gray-500 font-medium">
                 {new Date(nextBus.expectedArrival).toLocaleTimeString([], {
                   hour: "2-digit",
