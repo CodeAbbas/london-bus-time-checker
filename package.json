@@ -11,19 +11,20 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@radix-ui/react-slot": "^1.5.0",
     "@vercel/analytics": "1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "leaflet": "latest",
     "lucide-react": "^0.454.0",
     "next": "16.2.0",
     "react": "^19",
     "react-dom": "^19",
+    "react-leaflet": "latest",
     "shadcn": "^4.11.0",
     "tailwind-merge": "^2.5.5",
-    "tw-animate-css": "latest",
-    "leaflet": "latest",
-    "react-leaflet": "latest",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "tw-animate-css": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
