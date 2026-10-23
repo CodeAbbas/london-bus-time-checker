@@ -1,31 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MapPin, AlertCircle, Zap, Loader2, Bus } from 'lucide-react'
-import dynamic from "next/dynamic"
+import { AlertCircle, Bus } from "lucide-react"
 import { CompactControls } from "@/components/compact-controls"
 import { ArrivalsPanel } from "@/components/arrivals-panel"
 import { NearbyStopsList } from "@/components/nearby-stops-list"
-// Import the new skeleton
 import { NearbyStopsSkeleton } from "@/components/skeletons"
+import { BusMapWrapper } from "@/components/BusMapWrapper"
 
 import { useBusArrivals } from "@/hooks/useBusArrivals"
-
-// Lazy loaded Leaflet Map
-const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full bg-tfl-gray-50 rounded-lg flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
-        <p className="text-timing text-tfl-gray-600">Loading map...</p>
-      </div>
-    </div>
-  ),
-})
 
 interface BusStop {
   id: string
@@ -235,28 +219,14 @@ export default function TfLBusTracker() {
         </div>
 
 
-        <Card className="h-[600px] backdrop-blur-sm bg-white/95 border-0 shadow-xl overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-header">
-              <MapPin className="h-5 w-5 text-tfl-red" aria-hidden="true" />
-              {selectedStop ? "Live Bus Map" : "Map"}
-              {userLocation && (
-                <Badge variant="secondary" className="ml-auto">
-                  <Zap className="h-3 w-3 mr-1" aria-hidden="true" />
-                  Live
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 h-[calc(100%-4rem)]">
-            <LeafletMap
-              busStops={allStops}
-              selectedStop={selectedStop}
-              userLocation={userLocation}
-              onStopSelect={handleStopSelect}
-            />
-          </CardContent>
-        </Card>
+        <div className="mt-6">
+          <BusMapWrapper
+            busStops={allStops}
+            selectedStop={selectedStop}
+            userLocation={userLocation}
+            onStopSelect={handleStopSelect}
+          />
+        </div>
       </div>
     </div>
   )
