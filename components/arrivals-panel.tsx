@@ -1,12 +1,13 @@
 "use client"
 
-import { memo, useMemo, useCallback } from "react"
+import { memo, useMemo, useCallback, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind, Heart } from "lucide-react"
 // Import the new skeleton
 import { ArrivalsSkeleton } from "@/components/skeletons"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // --- INTERFACES ---
 interface BusStop {
@@ -40,21 +41,20 @@ interface ArrivalsPanelProps {
 }
 
 // --- UTILITY FUNCTIONS ---
-const formatArrivalTime = (seconds: number) => {
-  if (seconds < 60) return "Due"
-  const minutes = Math.floor(seconds / 60)
+const formatArrivalTime = (minutes: number) => {
+  if (minutes <= 0) return "Due"
   return `${minutes}min`
 }
 
-const getArrivalColor = (seconds: number) => {
-  if (seconds < 120) return "bg-tfl-red"
-  if (seconds < 300) return "bg-amber-500"
+const getArrivalColor = (minutes: number) => {
+  if (minutes <= 1) return "bg-tfl-red"
+  if (minutes <= 5) return "bg-amber-500"
   return "bg-emerald-500"
 }
 
-const getArrivalTextColor = (seconds: number) => {
-  if (seconds < 120) return "text-tfl-red"
-  if (seconds < 300) return "text-amber-600"
+const getArrivalTextColor = (minutes: number) => {
+  if (minutes <= 1) return "text-tfl-red"
+  if (minutes <= 5) return "text-amber-600"
   return "text-emerald-600"
 }
 
@@ -176,7 +176,7 @@ const ArrivalRow = memo(
             <div className={`font-black text-xl ${getArrivalTextColor(nextBus.timeToStation)}`} aria-live="polite">
               {formatArrivalTime(nextBus.timeToStation)}
             </div>
-            {nextBus.timeToStation >= 60 && (
+            {nextBus.timeToStation > 0 && (
               <div className="text-xs text-tfl-gray-500 font-medium">
                 {new Date(nextBus.expectedArrival).toLocaleTimeString([], {
                   hour: "2-digit",
@@ -189,6 +189,13 @@ const ArrivalRow = memo(
       </div>
     )
   },
+  (previous, next) => previous.lineName === next.lineName && previous.index === next.index &&
+    previous.lineArrivals.length === next.lineArrivals.length &&
+    previous.lineArrivals.slice(0, 3).every((arrival, index) => {
+      const other = next.lineArrivals[index]
+      return arrival.id === other.id && arrival.timeToStation === other.timeToStation &&
+        arrival.destinationName === other.destinationName && arrival.expectedArrival === other.expectedArrival
+    }),
 )
 
 ArrivalRow.displayName = "ArrivalRow"
@@ -275,9 +282,19 @@ export const ArrivalsPanel = memo(
               </div>
 
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-header text-tfl-dark truncate mb-1">{selectedStop.commonName}</CardTitle>
-                {towardsDestination && (
-                  <p className="text-timing text-tfl-gray-600 truncate font-medium">{towardsDestination}</p>
+                {loading ? (
+                  <div role="status" className="flex flex-col gap-2">
+                    <span className="sr-only">Loading arrivals for {selectedStop.commonName}</span>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ) : (
+                  <>
+                    <CardTitle className="text-header text-tfl-dark truncate mb-1">{selectedStop.commonName}</CardTitle>
+                    {towardsDestination && (
+                      <p className="text-timing text-tfl-gray-600 truncate font-medium">{towardsDestination}</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

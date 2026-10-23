@@ -1,32 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MapPin, AlertCircle, Zap, Loader2, Bus } from 'lucide-react'
-import dynamic from "next/dynamic"
+import { AlertCircle, Bus } from "lucide-react"
 import { CompactControls } from "@/components/compact-controls"
 import { ArrivalsPanel } from "@/components/arrivals-panel"
 import { NearbyStopsList } from "@/components/nearby-stops-list"
-// Import the new skeleton
 import { NearbyStopsSkeleton } from "@/components/skeletons"
+import { BusMapWrapper } from "@/components/BusMapWrapper"
 
-// LocalStorage cache management
-const CACHE_TTL = 60 * 1000 // 60 seconds
-
-// Lazy loaded Leaflet Map
-const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full bg-tfl-gray-50 rounded-lg flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
-        <p className="text-timing text-tfl-gray-600">Loading map...</p>
-      </div>
-    </div>
-  ),
-})
+import { useBusArrivals } from "@/hooks/useBusArrivals"
 
 interface BusStop {
   id: string
@@ -39,62 +22,20 @@ interface BusStop {
   additionalProperties?: Array<{ key: string; value: string }>
 }
 
-interface BusArrival {
-  id: string
-  lineName: string
-  destinationName: string
-  timeToStation: number
-  expectedArrival: string
-  vehicleId: string
-}
-
 interface UserLocation {
   lat: number
   lng: number
-}
-
-// Cache management functions
-const getCachedArrivals = (stopId: string) => {
-  if (typeof window === "undefined") return null
-
-  const cached = localStorage.getItem(`arrivals-${stopId}`)
-  if (!cached) return null
-
-  try {
-    const { data, timestamp } = JSON.parse(cached)
-    const now = Date.now()
-
-    if (now - timestamp < CACHE_TTL) {
-      return { data, timestamp: new Date(timestamp) }
-    }
-  } catch (e) {
-    console.error("Error parsing cached data", e)
-  }
-
-  return null
-}
-
-const setCachedArrivals = (stopId: string, data: BusArrival[]) => {
-  if (typeof window === "undefined") return
-
-  try {
-    localStorage.setItem(`arrivals-${stopId}`, JSON.stringify({ data, timestamp: Date.now() }))
-  } catch (e) {
-    console.error("Error caching arrival data", e)
-  }
 }
 
 export default function TfLBusTracker() {
   const [selectedStop, setSelectedStop] = useState<BusStop | null>(null)
   const [busStops, setBusStops] = useState<BusStop[]>([])
   const [nearbyStops, setNearbyStops] = useState<BusStop[]>([])
-  const [arrivals, setArrivals] = useState<BusArrival[]>([])
+  const { arrivals, loading: arrivalsLoading, error: arrivalsError, lastUpdated, refresh } = useBusArrivals(selectedStop?.id)
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [loading, setLoading] = useState(false)
-  const [arrivalsLoading, setArrivalsLoading] = useState(false)
   const [locationLoading, setLocationLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [showNearbyList, setShowNearbyList] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -110,9 +51,9 @@ export default function TfLBusTracker() {
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 5000, // Optimized timeout
-          maximumAge: 300000, // Optimized cache
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 60000,
         })
       })
 
@@ -124,7 +65,7 @@ export default function TfLBusTracker() {
       setUserLocation(location)
       setBusStops([])
       setSelectedStop(null)
-      setArrivals([])
+      
 
       await findNearbyStops(location.lat, location.lng)
     } catch (err) {
@@ -170,7 +111,7 @@ export default function TfLBusTracker() {
       setNearbyStops(data.stopPoints)
       setShowNearbyList(true)
       setSelectedStop(null)
-      setArrivals([])
+      
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
         console.error("Error finding nearby stops:", err)
@@ -188,68 +129,14 @@ export default function TfLBusTracker() {
     return () => controller.abort()
   }, [])
 
-  const getArrivals = useCallback(async (stopId: string) => {
-    const cached = getCachedArrivals(stopId)
-    if (cached) {
-      setArrivals(cached.data)
-      setLastUpdated(cached.timestamp)
-      fetchFreshArrivals(stopId, true)
-      return
-    }
-    fetchFreshArrivals(stopId)
+  const handleStopSelect = useCallback((stop: BusStop) => {
+    setSelectedStop(stop)
+    setShowNearbyList(false)
   }, [])
-
-  const fetchFreshArrivals = useCallback(async (stopId: string, isBackground = false) => {
-    if (!isBackground) {
-      setArrivalsLoading(true)
-      setError(null)
-    }
-
-    try {
-      const response = await fetch(`/api/tfl/arrivals?stopId=${stopId}`, {
-        headers: {
-          "Cache-Control": "max-age=30",
-        },
-      })
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Stop not found")
-        }
-        throw new Error("Failed to get arrivals")
-      }
-
-      const data = await response.json()
-      const sortedData = data.sort((a: BusArrival, b: BusArrival) => a.timeToStation - b.timeToStation)
-
-      setArrivals(sortedData)
-      setLastUpdated(new Date())
-      setCachedArrivals(stopId, sortedData)
-    } catch (err) {
-      console.error("Error getting arrivals:", err)
-      if (!isBackground) {
-        setError("Failed to get arrival times. Please try again.")
-        setArrivals([])
-      }
-    } finally {
-      if (!isBackground) {
-        setArrivalsLoading(false)
-      }
-    }
-  }, [])
-
-  const handleStopSelect = useCallback(
-    (stop: BusStop) => {
-      setSelectedStop(stop)
-      setShowNearbyList(false)
-      getArrivals(stop.id)
-    },
-    [getArrivals],
-  )
 
   const handleBackToNearby = useCallback(() => {
     setSelectedStop(null)
-    setArrivals([])
+    
     setShowNearbyList(true)
   }, [])
 
@@ -263,14 +150,6 @@ export default function TfLBusTracker() {
     () => [...nearbyStops, ...busStops.filter((stop) => !nearbyStops.find((ns) => ns.id === stop.id))],
     [nearbyStops, busStops],
   )
-
-  useEffect(() => {
-    if (!selectedStop) return
-    const interval = setInterval(() => {
-      fetchFreshArrivals(selectedStop.id)
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [selectedStop, fetchFreshArrivals])
 
   useEffect(() => {
     getCurrentLocation()
@@ -312,10 +191,10 @@ export default function TfLBusTracker() {
             hasLocation={!!userLocation}
           />
 
-          {error && (
+          {(error || arrivalsError) && (
             <Alert variant="destructive" className="animate-slide-in" role="alert">
               <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || arrivalsError}</AlertDescription>
             </Alert>
           )}
 
@@ -332,7 +211,7 @@ export default function TfLBusTracker() {
               arrivals={arrivals}
               loading={arrivalsLoading}
               lastUpdated={lastUpdated}
-              onRefresh={() => selectedStop && getArrivals(selectedStop.id)}
+              onRefresh={refresh}
               onBack={handleBackToNearby}
               showBackButton={nearbyStops.length > 0}
             />
@@ -340,28 +219,14 @@ export default function TfLBusTracker() {
         </div>
 
 
-        <Card className="h-[600px] backdrop-blur-sm bg-white/95 border-0 shadow-xl overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-header">
-              <MapPin className="h-5 w-5 text-tfl-red" aria-hidden="true" />
-              {selectedStop ? "Live Bus Map" : "Map"}
-              {userLocation && (
-                <Badge variant="secondary" className="ml-auto">
-                  <Zap className="h-3 w-3 mr-1" aria-hidden="true" />
-                  Live
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 h-[calc(100%-4rem)]">
-            <LeafletMap
-              busStops={allStops}
-              selectedStop={selectedStop}
-              userLocation={userLocation}
-              onStopSelect={handleStopSelect}
-            />
-          </CardContent>
-        </Card>
+        <div className="mt-6">
+          <BusMapWrapper
+            busStops={allStops}
+            selectedStop={selectedStop}
+            userLocation={userLocation}
+            onStopSelect={handleStopSelect}
+          />
+        </div>
       </div>
     </div>
   )

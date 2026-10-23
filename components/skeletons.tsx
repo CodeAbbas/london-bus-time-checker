@@ -23,12 +23,12 @@ export function NearbyStopsSkeleton() {
             className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 bg-white"
           >
             {/* Stop Letter Icon */}
-            <div className="w-12 h-12 rounded-xl bg-gray-200 animate-shimmer flex-shrink-0" />
+            <div className="w-12 h-12 rounded-xl bg-gray-200 animate-pulse flex-shrink-0" />
             
             {/* Text Content */}
             <div className="flex-1 space-y-2">
-              <div className="h-5 w-3/4 bg-gray-200 rounded animate-shimmer" />
-              <div className="h-3 w-1/2 bg-gray-100 rounded animate-shimmer" />
+              <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-1/2 bg-gray-100 rounded animate-pulse" />
             </div>
           </div>
         ))}
@@ -46,18 +46,18 @@ export function ArrivalsSkeleton() {
           className="flex items-center gap-4 p-3 rounded-xl bg-white border border-gray-100"
         >
           {/* Bus Number Badge */}
-          <div className="w-16 h-12 rounded-xl bg-gray-200 animate-shimmer flex-shrink-0" />
+          <div className="w-16 h-12 rounded-xl bg-gray-200 animate-pulse flex-shrink-0" />
           
           {/* Destination */}
           <div className="flex-1 space-y-2">
-            <div className="h-5 w-2/3 bg-gray-200 rounded animate-shimmer" />
-            <div className="h-3 w-1/3 bg-gray-100 rounded animate-shimmer" />
+            <div className="h-5 w-2/3 bg-gray-200 rounded animate-pulse" />
+            <div className="h-3 w-1/3 bg-gray-100 rounded animate-pulse" />
           </div>
 
           {/* Arrival Time */}
           <div className="flex flex-col items-end gap-1">
             <div className="w-3 h-3 rounded-full bg-gray-300 animate-pulse mb-1" />
-            <div className="h-6 w-12 bg-gray-200 rounded animate-shimmer" />
+            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse" />
           </div>
         </div>
       ))}
