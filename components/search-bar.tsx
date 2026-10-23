@@ -62,7 +62,7 @@ export function SearchBar({ onStopsFound, onStopSelect, onError }: SearchBarProp
   useEffect(() => {
     const timer = setTimeout(() => {
       searchBusStops(searchQuery)
-    }, 300)
+    }, 350)
 
     return () => clearTimeout(timer)
   }, [searchQuery])

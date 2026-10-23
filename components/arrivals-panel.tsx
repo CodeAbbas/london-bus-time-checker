@@ -1,12 +1,13 @@
 "use client"
 
-import { memo, useMemo, useCallback } from "react"
+import { memo, useMemo, useCallback, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind, Heart } from "lucide-react"
 // Import the new skeleton
 import { ArrivalsSkeleton } from "@/components/skeletons"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // --- INTERFACES ---
 interface BusStop {
@@ -189,6 +190,13 @@ const ArrivalRow = memo(
       </div>
     )
   },
+  (previous, next) => previous.lineName === next.lineName && previous.index === next.index &&
+    previous.lineArrivals.length === next.lineArrivals.length &&
+    previous.lineArrivals.slice(0, 3).every((arrival, index) => {
+      const other = next.lineArrivals[index]
+      return arrival.id === other.id && arrival.timeToStation === other.timeToStation &&
+        arrival.destinationName === other.destinationName && arrival.expectedArrival === other.expectedArrival
+    }),
 )
 
 ArrivalRow.displayName = "ArrivalRow"
@@ -275,9 +283,19 @@ export const ArrivalsPanel = memo(
               </div>
 
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-header text-tfl-dark truncate mb-1">{selectedStop.commonName}</CardTitle>
-                {towardsDestination && (
-                  <p className="text-timing text-tfl-gray-600 truncate font-medium">{towardsDestination}</p>
+                {loading ? (
+                  <div role="status" className="flex flex-col gap-2">
+                    <span className="sr-only">Loading arrivals for {selectedStop.commonName}</span>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ) : (
+                  <>
+                    <CardTitle className="text-header text-tfl-dark truncate mb-1">{selectedStop.commonName}</CardTitle>
+                    {towardsDestination && (
+                      <p className="text-timing text-tfl-gray-600 truncate font-medium">{towardsDestination}</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

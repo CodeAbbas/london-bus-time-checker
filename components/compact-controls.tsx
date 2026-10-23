@@ -82,7 +82,7 @@ export function CompactControls({
   useEffect(() => {
     const timer = setTimeout(() => {
       searchBusStops(searchQuery)
-    }, 400) // Slightly longer debounce for the heavier API call
+    }, 350)
     return () => clearTimeout(timer)
   }, [searchQuery])
 
