@@ -4,9 +4,8 @@ import { memo, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind, Heart } from "lucide-react"
-// Import the new skeleton
-import { ArrivalsSkeleton } from "@/components/skeletons"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Bus, RefreshCw, Clock, Zap, MapPin, ArrowLeft, Wind } from "lucide-react"
 
 // --- INTERFACES ---
 interface BusStop {
@@ -73,36 +72,6 @@ const getStopIndicator = (stop: BusStop) => {
   return stop.indicator?.replace("Stop ", "").trim() || "BUS"
 }
 
-// --- CUSTOM HOOK FOR FAVORITES ---
-const useFavorite = (stopId: string | undefined) => {
-  const [isFavorite, setIsFavorite] = useState(false)
-  
-  useEffect(() => {
-    if (!stopId) return
-    const favorites = JSON.parse(localStorage.getItem("tfl-favorites") || "[]")
-    setIsFavorite(favorites.includes(stopId))
-  }, [stopId])
-  
-  const toggleFavorite = () => {
-    if (!stopId) return
-    
-    const favorites = JSON.parse(localStorage.getItem("tfl-favorites") || "[]")
-    let newFavorites
-    
-    if (favorites.includes(stopId)) {
-      newFavorites = favorites.filter((id: string) => id !== stopId)
-      setIsFavorite(false)
-    } else {
-      newFavorites = [...favorites, stopId]
-      setIsFavorite(true)
-    }
-    
-    localStorage.setItem("tfl-favorites", JSON.stringify(newFavorites))
-    window.dispatchEvent(new Event("favorites-updated")) // Notify other components
-  }
-  
-  return { isFavorite, toggleFavorite }
-}
 // --- MEMOIZED COMPONENTS ---
 const EmptyState = memo(
   ({
@@ -128,6 +97,23 @@ const EmptyState = memo(
 
 EmptyState.displayName = "EmptyState"
 
+const LoadingSkeleton = memo(() => (
+  <div className="space-y-3">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-tfl-gray-50/50">
+        <Skeleton className="h-12 w-16 rounded-lg" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+        <Skeleton className="h-8 w-20 rounded-full" />
+      </div>
+    ))}
+  </div>
+))
+
+LoadingSkeleton.displayName = "LoadingSkeleton"
+
 const ArrivalRow = memo(
   ({
     lineName,
@@ -146,6 +132,7 @@ const ArrivalRow = memo(
         className="group flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-white to-tfl-gray-50/50 border border-tfl-gray-200/60 hover:shadow-md hover:border-tfl-blue/20 transition-all duration-200 hover:scale-[1.01]"
         style={{ animationDelay: `${index * 80}ms` }}
       >
+        {/* Enhanced Bus Line Badge */}
         <div className="flex-shrink-0">
           <Badge
             variant="secondary"
@@ -155,6 +142,7 @@ const ArrivalRow = memo(
           </Badge>
         </div>
 
+        {/* Destination and Additional Times */}
         <div className="flex-1 min-w-0 space-y-1">
           <p className="font-bold text-stop text-tfl-dark truncate group-hover:text-tfl-blue transition-colors duration-200">
             {nextBus.destinationName}
@@ -167,6 +155,7 @@ const ArrivalRow = memo(
           )}
         </div>
 
+        {/* Enhanced Arrival Time Display with ARIA */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div
             className={`w-3 h-3 rounded-full ${getArrivalColor(nextBus.timeToStation)} shadow-sm`}
@@ -196,6 +185,7 @@ ArrivalRow.displayName = "ArrivalRow"
 // --- MAIN COMPONENT ---
 export const ArrivalsPanel = memo(
   ({ selectedStop, arrivals, loading, lastUpdated, onRefresh, onBack, showBackButton }: ArrivalsPanelProps) => {
+    // Memoized calculations
     const processedData = useMemo(() => {
       if (!selectedStop) return null
 
@@ -231,6 +221,7 @@ export const ArrivalsPanel = memo(
       }
     }, [selectedStop, arrivals])
 
+    // Memoized callbacks
     const handleRefresh = useCallback(() => {
       onRefresh()
     }, [onRefresh])
@@ -252,6 +243,7 @@ export const ArrivalsPanel = memo(
 
     return (
       <Card className="backdrop-blur-sm bg-white/95 border-0 shadow-2xl ring-1 ring-tfl-gray-200/50 overflow-hidden">
+        {/* --- ENHANCED CARD HEADER --- */}
         <CardHeader className="p-5 bg-gradient-to-r from-tfl-gray-50 to-blue-50/50 border-b border-tfl-gray-200/80">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -267,6 +259,7 @@ export const ArrivalsPanel = memo(
                 </Button>
               )}
 
+              {/* Enhanced Stop Indicator */}
               <div className="relative flex-shrink-0">
                 <div className="absolute inset-0 bg-tfl-red rounded-xl blur-sm opacity-20"></div>
                 <div className="relative w-12 h-12 bg-gradient-to-br from-tfl-red to-tfl-red rounded-xl flex items-center justify-center shadow-lg">
@@ -295,6 +288,7 @@ export const ArrivalsPanel = memo(
             </Button>
           </div>
 
+          {/* Enhanced Info Row */}
           <div className="flex items-center justify-between text-xs text-tfl-gray-600 mt-4 pt-3 border-t border-tfl-gray-200/50">
             {selectedStop.distance && (
               <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-full">
@@ -317,9 +311,10 @@ export const ArrivalsPanel = memo(
           </div>
         </CardHeader>
 
+        {/* --- ENHANCED CARD CONTENT --- */}
         <CardContent className="p-5">
           {loading ? (
-            <ArrivalsSkeleton />
+            <LoadingSkeleton />
           ) : sortedLineNames.length > 0 ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">

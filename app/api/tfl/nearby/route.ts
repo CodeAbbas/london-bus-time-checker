@@ -46,14 +46,7 @@ export async function GET(request: NextRequest) {
         }
       }) || []
 
-    return NextResponse.json({ stopPoints: transformedStops },
-      {
-        headers: {
-          // Cache nearby stops for 30 seconds (they don't move!)
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
-    )
+    return NextResponse.json({ stopPoints: transformedStops })
   } catch (error) {
     console.error("TfL Nearby API error:", error)
     return NextResponse.json({ error: "Failed to find nearby bus stops" }, { status: 500 })

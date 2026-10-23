@@ -1,20 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, MapPin, Loader2, Navigation } from 'lucide-react'
+import { Search, MapPin, Navigation, Loader2 } from 'lucide-react'
 
-// Updated Interface to match rich API data
 interface BusStop {
   id: string
   commonName: string
   lat: number
   lon: number
   distance?: number
-  indicator?: string
-  towards?: string
-  lines?: string[]
 }
 
 interface CompactControlsProps {
@@ -37,12 +35,8 @@ export function CompactControls({
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<BusStop[]>([])
   const [loading, setLoading] = useState(false)
-  const isSelectingRef = useRef(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const searchBusStops = async (query: string) => {
-    if (isSelectingRef.current) return // Don't search if we just clicked
-
     if (!query.trim()) {
       setSearchResults([])
       onStopsFound([])
@@ -61,157 +55,133 @@ export function CompactControls({
       setSearchResults(stops)
       onStopsFound(stops)
     } catch (err) {
+      onError("Failed to search for bus stops. Please try again.")
       setSearchResults([])
+      onStopsFound([])
     } finally {
       setLoading(false)
     }
   }
 
   const handleStopSelect = (stop: BusStop) => {
-    isSelectingRef.current = true
-    setSearchQuery(stop.commonName)
-    setSearchResults([]) // Force close dropdown
     onStopSelect(stop)
-    
-    // Reset selection lock after a short delay
-    setTimeout(() => {
-      isSelectingRef.current = false
-    }, 500)
+    setSearchResults([])
+    setSearchQuery(stop.commonName)
   }
 
+  // Search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       searchBusStops(searchQuery)
-    }, 400) // Slightly longer debounce for the heavier API call
+    }, 300)
+
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setSearchResults([])
-      }
+  const formatDistance = (distance?: number) => {
+    if (!distance) return null
+    if (distance < 1000) {
+      return `${Math.round(distance)}m away`
+    } else {
+      return `${(distance / 1000).toFixed(1)}km away`
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+  }
 
-  const getStopLetter = (stop: BusStop) => {
-    // Prioritize the API indicator, fallback to first letter of name
-    return stop.indicator || (stop.commonName ? stop.commonName.charAt(0).toUpperCase() : "B")
+  const calculateWalkingTime = (distance?: number) => {
+    if (!distance) return null
+    // Average walking speed: ~5 km/h = ~84 m/min
+    const walkingTimeMinutes = Math.ceil(distance / 84)
+    return `🚶 ${walkingTimeMinutes}min`
   }
 
   return (
-    <div className="w-full relative z-50 mb-6" ref={dropdownRef}>
-      {/* Search Bar */}
-      <div className="relative group">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10">
-          <Search size={20} />
-        </div>
-
-        <input 
-          type="text"
-          placeholder="Search for bus stops, routes..."
-          value={searchQuery}
-          onChange={(e) => {
-             isSelectingRef.current = false // Unlock on typing
-             setSearchQuery(e.target.value)
-          }}
-          className="w-full h-14 pl-12 pr-14 bg-white text-gray-900 placeholder-gray-500 rounded-2xl border-none shadow-lg outline-none transition-all duration-200 focus:ring-2 focus:ring-tfl-blue/20"
-        />
-
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
+    <Card className="backdrop-blur-sm bg-white/80 border-0 shadow-xl">
+      <CardContent className="p-4">
+        {/* Compact Controls Row */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          {/* Location Button */}
           <Button
-            variant="ghost"
-            size="icon"
             onClick={onLocationUpdate}
             disabled={locationLoading}
-            className={`h-10 w-10 rounded-xl transition-all duration-200 ${
-              hasLocation 
-                ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" 
-                : "text-gray-400 hover:bg-gray-100"
+            className={`flex-shrink-0 transition-all duration-200 transform hover:scale-[1.02] ${
+              hasLocation
+                ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                : "bg-gradient-to-r from-tfl-red to-red-600 hover:from-red-600 hover:to-red-700"
             }`}
           >
             {locationLoading ? (
-              <Loader2 size={20} className="animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span className="hidden sm:inline">Getting Location...</span>
+                <span className="sm:hidden">Loading...</span>
+              </>
+            ) : hasLocation ? (
+              <>
+                <MapPin className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Update Location</span>
+                <span className="sm:hidden">Update</span>
+              </>
             ) : (
-              <MapPin size={22} className={hasLocation ? "fill-current" : ""} />
+              <>
+                <Navigation className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Use My Location</span>
+                <span className="sm:hidden">Location</span>
+              </>
             )}
           </Button>
+
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Input
+              placeholder="Search for bus stops, routes, or areas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 border-2 border-gray-200 focus:border-blue-400 transition-colors"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
         </div>
-      </div>
 
-      {/* Results Dropdown */}
-      {(loading || searchResults.length > 0) && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden p-2 z-50 animate-fade-in">
-          
-          {loading && (
-            <div className="space-y-2 p-2">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl" />
-              ))}
-            </div>
-          )}
+        {/* Search Results */}
+        {loading && (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        )}
 
-          {searchResults.length > 0 && !loading && (
-            <div className="max-h-[60vh] overflow-y-auto custom-scrollbar space-y-1">
-              {searchResults.map((stop) => (
-                <Button
-                  key={stop.id}
-                  variant="ghost"
-                  className="w-full justify-start h-auto p-3 text-left hover:bg-tfl-gray-50 transition-all duration-200 rounded-xl group border border-transparent hover:border-gray-100"
-                  onClick={() => handleStopSelect(stop)}
-                >
-                  <div className="flex items-start gap-3 w-full">
-                    
-                    {/* Stop Letter Icon */}
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-10 h-10 bg-gradient-to-br from-tfl-red to-red-600 rounded-lg flex items-center justify-center shadow-sm">
-                        <span className="text-white font-bold text-lg">
-                          {getStopLetter(stop)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Name */}
-                      <div className="font-bold text-tfl-dark text-base truncate">
-                        {stop.commonName}
-                      </div>
-                      
-                      {/* Towards Information (The missing link!) */}
-                      {stop.towards && (
-                        <div className="flex items-center gap-1.5 text-sm text-tfl-gray-600 mt-0.5">
-                          <Navigation size={12} className="text-tfl-gray-400 rotate-90" />
-                          <span className="truncate font-medium">
-                            towards {stop.towards}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Bus Lines Row */}
-                      {stop.lines && stop.lines.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {stop.lines.map((line) => (
-                            <span 
-                              key={line}
-                              className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-tfl-blue border border-blue-100"
-                            >
-                              {line}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+        {searchResults.length > 0 && (
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {searchResults.map((stop, index) => (
+              <Button
+                key={stop.id}
+                variant="ghost"
+                className="w-full justify-start h-auto p-3 text-left hover:bg-blue-50 transition-all duration-200 transform hover:scale-[1.01]"
+                onClick={() => handleStopSelect(stop)}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-start gap-3 w-full">
+                  <div className="p-1.5 bg-blue-100 rounded-full flex-shrink-0">
+                    <MapPin className="h-3 w-3 text-blue-600" />
                   </div>
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 truncate text-sm">{stop.commonName}</div>
+                    <div className="text-xs text-gray-500">Stop ID: {stop.id}</div>
+                    {stop.distance && (
+                      <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                        <span>{formatDistance(stop.distance)}</span>
+                        <span>•</span>
+                        <span>{calculateWalkingTime(stop.distance)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

@@ -6,7 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Removed the invalid 'eslint' block
 }
 
 export default nextConfig

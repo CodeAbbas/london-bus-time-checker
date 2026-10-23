@@ -2,6 +2,7 @@
   "name": "tfl-bus-tracker",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.3.4",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
@@ -9,26 +10,28 @@
     "start": "next start"
   },
   "dependencies": {
-    "@radix-ui/react-icons": "^1.3.2",
-    "@radix-ui/react-slot": "^1.2.4",
+    "@base-ui/react": "^1.5.0",
+    "@vercel/analytics": "1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "leaflet": "latest",
     "lucide-react": "^0.454.0",
-    "next": "15.1.11",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-leaflet": "latest",
+    "next": "16.2.0",
+    "react": "^19",
+    "react-dom": "^19",
+    "shadcn": "^4.11.0",
     "tailwind-merge": "^2.5.5",
+    "tw-animate-css": "latest",
+    "leaflet": "latest",
+    "react-leaflet": "latest",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.4.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8.5",
+    "tailwindcss": "4.1.17",
     "typescript": "^5"
   }
 }

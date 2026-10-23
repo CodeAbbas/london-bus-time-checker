@@ -31,11 +31,7 @@ export async function GET(request: NextRequest) {
       vehicleId: arrival.vehicleId,
     }))
 
-    return NextResponse.json(transformedArrivals, {
-      headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=30",
-      },
-    })
+    return NextResponse.json(transformedArrivals)
   } catch (error) {
     console.error("TfL Arrivals API error:", error)
     return NextResponse.json({ error: "Failed to get arrival times" }, { status: 500 })

@@ -4,25 +4,24 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MapPin, AlertCircle, Zap, Loader2, Bus } from 'lucide-react'
+import { MapPin, AlertCircle, Zap, Loader2, Bus } from "lucide-react"
 import dynamic from "next/dynamic"
 import { CompactControls } from "@/components/compact-controls"
 import { ArrivalsPanel } from "@/components/arrivals-panel"
 import { NearbyStopsList } from "@/components/nearby-stops-list"
-// Import the new skeleton
-import { NearbyStopsSkeleton } from "@/components/skeletons"
+import { StatsCard } from "@/components/stats-card"
 
 // LocalStorage cache management
 const CACHE_TTL = 60 * 1000 // 60 seconds
 
-// Lazy loaded Leaflet Map
-const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
+// Lazy loaded live bus map - defer loaded
+const LiveBusMap = dynamic(() => import("@/components/live-bus-map"), {
   ssr: false,
   loading: () => (
     <div className="h-full bg-tfl-gray-50 rounded-lg flex items-center justify-center">
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
-        <p className="text-timing text-tfl-gray-600">Loading map...</p>
+        <p className="text-timing text-tfl-gray-600">Loading live bus map...</p>
       </div>
     </div>
   ),
@@ -64,6 +63,7 @@ const getCachedArrivals = (stopId: string) => {
     const { data, timestamp } = JSON.parse(cached)
     const now = Date.now()
 
+    // Check if cache is still valid
     if (now - timestamp < CACHE_TTL) {
       return { data, timestamp: new Date(timestamp) }
     }
@@ -98,6 +98,7 @@ export default function TfLBusTracker() {
   const [showNearbyList, setShowNearbyList] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  // Optimized location fetching with better error handling
   const getCurrentLocation = useCallback(async () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by this browser")
@@ -111,8 +112,8 @@ export default function TfLBusTracker() {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 5000, // Optimized timeout
-          maximumAge: 300000, // Optimized cache
+          timeout: 10000,
+          maximumAge: 300000, // 5 minutes cache
         })
       })
 
@@ -135,10 +136,12 @@ export default function TfLBusTracker() {
     }
   }, [])
 
+  // Optimized nearby stops fetching with AbortController
   const findNearbyStops = useCallback(async (lat: number, lng: number) => {
     setLoading(true)
     setError(null)
 
+    // Cancel any in-flight requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -150,7 +153,7 @@ export default function TfLBusTracker() {
       const response = await fetch(`/api/tfl/nearby?lat=${lat}&lng=${lng}&radius=500`, {
         signal: controller.signal,
         headers: {
-          "Cache-Control": "max-age=300",
+          "Cache-Control": "max-age=300", // 5 minutes cache
         },
       })
 
@@ -188,17 +191,24 @@ export default function TfLBusTracker() {
     return () => controller.abort()
   }, [])
 
+  // Optimized arrivals fetching with caching
   const getArrivals = useCallback(async (stopId: string) => {
+    // Try to get cached data first
     const cached = getCachedArrivals(stopId)
     if (cached) {
       setArrivals(cached.data)
       setLastUpdated(cached.timestamp)
+
+      // Optional: still fetch fresh data in the background
       fetchFreshArrivals(stopId, true)
       return
     }
+
+    // No cache, fetch fresh data
     fetchFreshArrivals(stopId)
   }, [])
 
+  // Helper function to fetch fresh arrival data
   const fetchFreshArrivals = useCallback(async (stopId: string, isBackground = false) => {
     if (!isBackground) {
       setArrivalsLoading(true)
@@ -208,7 +218,7 @@ export default function TfLBusTracker() {
     try {
       const response = await fetch(`/api/tfl/arrivals?stopId=${stopId}`, {
         headers: {
-          "Cache-Control": "max-age=30",
+          "Cache-Control": "max-age=30", // 30 seconds cache
         },
       })
 
@@ -224,6 +234,8 @@ export default function TfLBusTracker() {
 
       setArrivals(sortedData)
       setLastUpdated(new Date())
+
+      // Store in cache
       setCachedArrivals(stopId, sortedData)
     } catch (err) {
       console.error("Error getting arrivals:", err)
@@ -238,6 +250,7 @@ export default function TfLBusTracker() {
     }
   }, [])
 
+  // Optimized callbacks
   const handleStopSelect = useCallback(
     (stop: BusStop) => {
       setSelectedStop(stop)
@@ -258,22 +271,35 @@ export default function TfLBusTracker() {
     setShowNearbyList(false)
   }, [])
 
+  // Memoized stats calculation
+  const stats = useMemo(
+    () => ({
+      totalStops: nearbyStops.length,
+    }),
+    [nearbyStops.length],
+  )
 
+  // Memoized all stops for map
   const allStops = useMemo(
     () => [...nearbyStops, ...busStops.filter((stop) => !nearbyStops.find((ns) => ns.id === stop.id))],
     [nearbyStops, busStops],
   )
 
+  // Auto-refresh arrivals with cleanup
   useEffect(() => {
     if (!selectedStop) return
+
     const interval = setInterval(() => {
       fetchFreshArrivals(selectedStop.id)
-    }, 30000)
+    }, 30000) // Refresh every 30 seconds
+
     return () => clearInterval(interval)
   }, [selectedStop, fetchFreshArrivals])
 
+  // Get location on mount
   useEffect(() => {
     getCurrentLocation()
+
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
@@ -283,6 +309,7 @@ export default function TfLBusTracker() {
 
   return (
     <div className="min-h-screen bg-tfl-gray-50">
+      {/* Optimized background elements with will-change */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-tfl-red/10 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob will-change-transform"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-tfl-blue/10 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000 will-change-transform"></div>
@@ -290,6 +317,7 @@ export default function TfLBusTracker() {
       </div>
 
       <div className="relative z-10 p-4 max-w-7xl mx-auto">
+        {/* Accessible Header */}
         <header className="text-center mb-6 animate-fade-in" role="banner">
           <div className="flex items-center justify-center gap-3 mb-2">
             <div className="p-3 bg-tfl-red rounded-2xl shadow-lg">
@@ -302,6 +330,7 @@ export default function TfLBusTracker() {
           </div>
         </header>
 
+        {/* Compact Controls Section */}
         <div className="mb-6 space-y-4">
           <CompactControls
             onLocationUpdate={getCurrentLocation}
@@ -312,6 +341,7 @@ export default function TfLBusTracker() {
             hasLocation={!!userLocation}
           />
 
+          {/* Error Alert */}
           {error && (
             <Alert variant="destructive" className="animate-slide-in" role="alert">
               <AlertCircle className="h-4 w-4" aria-hidden="true" />
@@ -319,13 +349,24 @@ export default function TfLBusTracker() {
             </Alert>
           )}
 
-          {/* New Skeleton Loader */}
-          {loading && <NearbyStopsSkeleton />}
+          {/* Loading indicator */}
+          {loading && (
+            <Card className="backdrop-blur-sm bg-white/80 border-0 shadow-xl">
+              <CardContent className="p-6 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-tfl-red mx-auto mb-2" aria-hidden="true" />
+                <p className="text-timing text-tfl-gray-600" aria-live="polite">
+                  Finding nearby bus stops...
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
+          {/* Optimized Nearby Stops List */}
           {!loading && showNearbyList && nearbyStops.length > 0 && (
             <NearbyStopsList stops={nearbyStops} onStopSelect={handleStopSelect} />
           )}
 
+          {/* Arrivals Panel */}
           {!loading && selectedStop && (
             <ArrivalsPanel
               selectedStop={selectedStop}
@@ -339,29 +380,36 @@ export default function TfLBusTracker() {
           )}
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4 mb-6">
+          <StatsCard icon={MapPin} title="Nearby Stops" value={stats.totalStops} subtitle="Within 500m" color="red" />
+        </div>
 
-        <Card className="h-[600px] backdrop-blur-sm bg-white/95 border-0 shadow-xl overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-header">
-              <MapPin className="h-5 w-5 text-tfl-red" aria-hidden="true" />
-              {selectedStop ? "Live Bus Map" : "Map"}
-              {userLocation && (
-                <Badge variant="secondary" className="ml-auto">
-                  <Zap className="h-3 w-3 mr-1" aria-hidden="true" />
-                  Live
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 h-[calc(100%-4rem)]">
-            <LeafletMap
-              busStops={allStops}
-              selectedStop={selectedStop}
-              userLocation={userLocation}
-              onStopSelect={handleStopSelect}
-            />
-          </CardContent>
-        </Card>
+        {/* Enhanced Map Section with Live Bus Tracking */}
+        {selectedStop && (
+          <Card className="h-[600px] backdrop-blur-sm bg-white/95 border-0 shadow-xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-header">
+                <MapPin className="h-5 w-5 text-tfl-red" aria-hidden="true" />
+                Live Bus Map
+                {userLocation && (
+                  <Badge variant="secondary" className="ml-auto">
+                    <Zap className="h-3 w-3 mr-1" aria-hidden="true" />
+                    Live
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 h-[calc(100%-4rem)]">
+              <LiveBusMap
+                busStops={allStops}
+                selectedStop={selectedStop}
+                userLocation={userLocation}
+                onStopSelect={handleStopSelect}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
